@@ -1,0 +1,151 @@
+import os
+import scipy as sp
+from scipy.stats import norm
+from matplotlib import pylab
+from sklearn.cluster import KMeans
+
+seed = 3
+sp.random.seed(seed)  # to reproduce the data later on
+num_clusters = 3 #example to reproduce the graphic of the book
+
+#To plot x and y data
+def plot_clustering(x, y, title, mx=None, ymax=None, xmin=None, km=None):
+    pylab.figure(num=None, figsize=(8, 6))
+    if km:
+        pylab.scatter(x, y, s=50, c=km.predict(list(zip(x, y)))) #c is the colour and depends of the prediction of the cluster 
+    else:
+        pylab.scatter(x, y, s=50)
+
+    pylab.title(title)
+    pylab.xlabel("Occurrence word 1")
+    pylab.ylabel("Occurrence word 2")
+
+    pylab.autoscale(tight=True)
+    pylab.ylim(ymin=0, ymax=1)
+    pylab.xlim(xmin=0, xmax=1)
+    pylab.grid(True, linestyle='-', color='0.75')
+
+    return pylab
+    
+#Example
+xw1 = norm(loc=0.3, scale=.15).rvs(20) # rvs() Random variates of given type. loc: location parameter.
+print(xw1) 
+
+#we create 20 random points for each cluster.
+xw1 = norm(loc=0.3, scale=.15).rvs(20)
+yw1 = norm(loc=0.3, scale=.15).rvs(20)
+
+xw2 = norm(loc=0.7, scale=.15).rvs(20)
+yw2 = norm(loc=0.7, scale=.15).rvs(20)
+
+xw3 = norm(loc=0.2, scale=.15).rvs(20)
+yw3 = norm(loc=0.8, scale=.15).rvs(20)
+
+x = sp.append(sp.append(xw1, xw2), xw3)
+y = sp.append(sp.append(yw1, yw2), yw3)
+
+i = 1
+plot_clustering(x, y, "Vectors")
+#pylab.savefig(os.path.join("..", "1400_03_0%i.png" % i))
+pylab.show()
+pylab.clf() #plt.clf() will clear the figure to paint another plot onto it.
+i += 1
+
+# 1 iteration ####################
+
+mx, my = sp.meshgrid(sp.arange(0, 1, 0.001), sp.arange(0, 1, 0.001))#points to predict their cluster
+
+#We implement the Clustering K-means through scikit modules
+#init : Method for initialization, {‘k-means++’, ‘random’ or an ndarray}. 
+ #‘random’: choose k observations (rows) at random from data for the initial centroids.
+#verbose : int, default 0 - Verbosity mode.
+#n_init : Number of time the k-means algorithm will be run with different centroid seeds. 
+ #The final results will be the best output of n_init consecutive runs in terms of inertia.
+#max_iter:Maximum number of iterations of the k-means algorithm for a single run.
+#random_state :If int, random_state is the seed used by the random number generator; 
+km = KMeans(init='random', n_clusters=num_clusters, verbose=1,
+            n_init=1, max_iter=1,
+            random_state=seed)
+km.fit(sp.array(list(zip(x, y))))#Compute k-means clustering.
+
+#predict(X) 	Predict the closest cluster each sample in X belongs to.
+Z = km.predict(sp.c_[mx.ravel(), my.ravel()]).reshape(mx.shape) #we can obtain the cluster of eeach point of the last mesgrid
+
+plot_clustering(x, y, "Clustering iteration 1", km=km) #we plot the 60 points with diferent colour for each cluster
+
+#To plot the prediccion of the points mx and my of the meshgrid to obtein the areas of the clusters
+#imshow allows plotting numpy arrays as images
+#X : array_like, shape (n, m) or (n, m, 3) or (n, m, 4)
+#interpolation :  none’, ‘nearest’, ‘bilinear’, ‘bicubic’, ‘spline16’, ‘spline36’, ‘hanning’, ‘hammin, ...
+#extent : scalars (left, right, bottom, top). The location, in data-coordinates, of the lower-left and upper-right corners. 
+#cmap: colour map
+#aspect : [‘auto’ | ‘equal’ | scalar],
+#origin : [‘upper’ | ‘lower’], Place the [0,0] index of the array in the upper left or lower left corner of the axes. 
+pylab.imshow(Z, interpolation='nearest',
+             extent=(mx.min(), mx.max(), my.min(), my.max()),
+             cmap=pylab.cm.Blues,
+             aspect='auto', origin='lower')
+
+#To plot the cluster centers with the symbol "x"
+c1a, c1b, c1c = km.cluster_centers_
+pylab.scatter(km.cluster_centers_[:, 0], km.cluster_centers_[:, 1],  #:,0 and :m1 is for select the respective axes to plot
+              marker='x', linewidth=2, s=100, color='black')
+#pylab.savefig(os.path.join("..", "1400_03_0%i.png" % i))
+pylab.show()
+pylab.clf()
+
+i += 1
+
+# 2 iterations ####################
+km = KMeans(init='random', n_clusters=num_clusters, verbose=1,
+            n_init=1, max_iter=2, ####we change to 2 iterations to see the next step in the convergence process
+            random_state=seed)
+km.fit(sp.array(list(zip(x, y))))
+
+Z = km.predict(sp.c_[mx.ravel(), my.ravel()]).reshape(mx.shape)
+
+plot_clustering(x, y, "Clustering iteration 2", km=km)
+pylab.imshow(Z, interpolation='nearest',
+             extent=(mx.min(), mx.max(), my.min(), my.max()),
+             cmap=pylab.cm.Blues,
+             aspect='auto', origin='lower')
+
+c2a, c2b, c2c = km.cluster_centers_
+pylab.scatter(km.cluster_centers_[:, 0], km.cluster_centers_[:, 1], 
+              marker='x', linewidth=2, s=100, color='black')
+
+###We plot 3 arrows using the location of the old cluster centers and the new ones.
+pylab.gca().add_patch(
+    pylab.Arrow(c1a[0], c1a[1], c2a[0] - c1a[0], c2a[1] - c1a[1], width=0.1))
+pylab.gca().add_patch(
+    pylab.Arrow(c1b[0], c1b[1], c2b[0] - c1b[0], c2b[1] - c1b[1], width=0.1))
+pylab.gca().add_patch(
+    pylab.Arrow(c1c[0], c1c[1], c2c[0] - c1c[0], c2c[1] - c1c[1], width=0.1))
+
+#pylab.savefig(os.path.join("..", "1400_03_0%i.png" % i))
+pylab.show()
+pylab.clf()
+
+i += 1
+
+# 10 iterations ####################
+km = KMeans(init='random', n_clusters=num_clusters, verbose=1,
+            n_init=1, max_iter=10, ####we change to 10 iterations to see the final step in the convergence process
+            random_state=seed)
+km.fit(sp.array(list(zip(x, y))))
+
+Z = km.predict(sp.c_[mx.ravel(), my.ravel()]).reshape(mx.shape)
+
+plot_clustering(x, y, "Clustering iteration 10", km=km)
+pylab.imshow(Z, interpolation='nearest',
+             extent=(mx.min(), mx.max(), my.min(), my.max()),
+             cmap=pylab.cm.Blues,
+             aspect='auto', origin='lower')
+
+pylab.scatter(km.cluster_centers_[:, 0], km.cluster_centers_[:, 1],
+              marker='x', linewidth=2, s=100, color='black')
+#pylab.savefig(os.path.join("..", "1400_03_0%i.png" % i))
+pylab.show()
+pylab.clf()
+
+i += 1
